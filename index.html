@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>2-Way WebRTC Video Call</title>
+</head>
+<body>
+  <h3>Your Room ID: <span id="roomId"></span></h3>
+  <button id="createRoom">Create Room</button>
+  <input id="roomInput" placeholder="Enter Room ID to Join" />
+  <button id="joinRoom">Join Room</button>
+  <hr/>
+  <video id="localVideo" autoplay playsinline muted width="320" height="240"></video>
+  <video id="remoteVideo" autoplay playsinline width="320" height="240"></video>
+
+  <script>
+    // Use your own signaling mechanism for real rooms (WebSocket, Socket.io etc.)
+    // This demo uses a temporary hack for manual signaling via room IDs in window.localStorage for simplicity!
+
+    // Generate a unique room ID
+    function generateRoomId() {
+      return Math.random().toString(36).substr(2, 9);
+    }
+
+    // TURN/STUN config (free Google STUN, demo TURN from crypub's demo, replace for production)
+    const iceConfig = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'turn:openrelay.metered.ca:80', username: "openrelayproject", credential: "openrelayproject" }
+      ]
+    };
+
+    const roomIdSpan = document.getElementById('roomId');
+    const createBtn = document.getElementById('createRoom');
+    const joinBtn = document.getElementById('joinRoom');
+    const roomInput = document.getElementById('roomInput');
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+
+    let pc;
+    let localStream;
+    let roomId;
+
+    // Simulated signaling for demo (not production-safe)
+    function sendSignal(room, key, value) {
+      localStorage.setItem(room + ":" + key, JSON.stringify(value));
+      // For instant signaling in demo
+      window.dispatchEvent(new Event('storage'));
+    }
+
+    function onSignal(room, key, cb) {
+      window.addEventListener('storage', function (event) {
+        if(event.key === room + ":" + key) {
+          cb(JSON.parse(event.newValue));
+        }
+      });
+    }
+
+    function cleanupSignaling(room) {
+      localStorage.removeItem(room + ":offer");
+      localStorage.removeItem(room + ":answer");
+      localStorage.removeItem(room + ":candidate");
+      localStorage.removeItem(room + ":candidate2");
+    }
+
+    async function start(isCaller, room) {
+      roomId = room;
+      roomIdSpan.textContent = room;
+      cleanupSignaling(room);
+      pc = new RTCPeerConnection(iceConfig);
+
+      pc.onicecandidate = event => {
+        if(event.candidate) {
+          sendSignal(room, isCaller ? "candidate" : "candidate2", event.candidate);
+        }
+      };
+
+      pc.ontrack = event => {
+        remoteVideo.srcObject = event.streams[0];
+      };
+
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideo.srcObject = localStream;
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+      if(isCaller) {
+        let offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        sendSignal(room, "offer", offer);
+
+        onSignal(room, "answer", async (answer) => {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        });
+        onSignal(room, "candidate2", async (candidate) => {
+          try { await pc.addIceCandidate(candidate); } catch(e) {}
+        });
+      } else {
+        onSignal(room, "offer", async (offer) => {
+          await pc.setRemoteDescription(new RTCSessionDescription(offer));
+          let answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          sendSignal(room, "answer", answer);
+        });
+        onSignal(room, "candidate", async (candidate) => {
+          try { await pc.addIceCandidate(candidate); } catch(e) {}
+        });
+      }
+
+      onSignal(room, "candidate", async (candidate) => {
+        if (!isCaller) {
+          try { await pc.addIceCandidate(candidate); } catch(e) {}
+        }
+      });
+
+      onSignal(room, "candidate2", async (candidate) => {
+        if (isCaller) {
+          try { await pc.addIceCandidate(candidate); } catch(e) {}
+        }
+      });
+
+    }
+
+    createBtn.onclick = () => {
+      const newRoomId = generateRoomId();
+      roomInput.value = newRoomId;
+      start(true, newRoomId);
+    };
+
+    joinBtn.onclick = () => {
+      if(roomInput.value) start(false, roomInput.value);
+    };
+
+    // Pre-fill Room ID if provided in URL fragment
+    if(location.hash.length > 1) {
+      roomInput.value = location.hash.substring(1);
+    }
+  </script>
+</body>
+</html>
