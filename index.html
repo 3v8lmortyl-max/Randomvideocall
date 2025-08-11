@@ -1,391 +1,136 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Wechat — Random Video Reels</title>
-  <meta name="description" content="Wechat — swipe to meet random people by live camera. Minimal, mobile-first."/>
-  <style>
-    :root{
-      --bg1:#041022; --bg2:#071428; --accent:#22c1c3; --muted:#94a3b8;
-    }
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#fff;overflow:hidden}
-    /* Splash */
-    #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:60;backdrop-filter:blur(2px)}
-    #logo{display:flex;align-items:center;gap:12px}
-    .logoMark{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px;background:linear-gradient(135deg,var(--accent),#60a5fa);color:#012}
-    #logoTitle{font-size:26px;font-weight:700}
-    #splashHint{margin-top:12px;color:var(--muted);font-size:13px}
-
-    /* App layout */
-    #app{height:100%;display:none;position:relative}
-    .reel{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch}
-    .card{height:100vh;scroll-snap-align:start;position:relative;display:flex;align-items:center;justify-content:center}
-    video.remote{width:100%;height:100%;object-fit:cover;filter:brightness(.95) saturate(1.02)}
-    .selfCam{position:absolute;top:18px;right:14px;width:110px;height:150px;border-radius:12px;overflow:hidden;border:2px solid rgba(255,255,255,0.06);box-shadow:0 8px 24px rgba(0,0,0,0.6);z-index:30}
-    .selfCam video{width:100%;height:100%;object-fit:cover}
-
-    .topBar{position:absolute;left:12px;top:10px;z-index:30}
-    .status{font-size:13px;color:var(--muted);margin-top:6px}
-
-    .controls{position:absolute;left:0;right:0;bottom:32px;display:flex;justify-content:center;gap:14px;z-index:30}
-    .btn{width:64px;height:64px;border-radius:999px;border:none;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;background:rgba(255,255,255,0.06);color:#fff}
-    .btn.primary{background:linear-gradient(135deg,var(--accent),#60a5fa);color:#012}
-    .likeCount{position:absolute;left:18px;bottom:24px;color:#fff;font-weight:700;text-shadow:0 4px 12px rgba(0,0,0,0.6);z-index:32}
-
-    .loader{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:40;pointer-events:none}
-    .pulse{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#60a5fa);animation:pulse 1.2s infinite}
-    @keyframes pulse{0%{transform:scale(.9)}50%{transform:scale(1.15)}100%{transform:scale(.9)}}
-
-    /* small helpers */
-    .hidden{display:none}
-    .reportBtn{position:absolute;right:16px;top:16px;background:rgba(0,0,0,0.3);padding:8px 10px;border-radius:8px;font-size:13px}
-
-    @media(min-width:900px){
-      .selfCam{width:180px;height:240px}
-      .btn{width:72px;height:72px}
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Vibe - Random Video Chat</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Icons -->
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 </head>
 <body>
-
-  <div id="splash">
-    <div id="logo">
-      <div class="logoMark">W</div>
-      <div>
-        <div id="logoTitle">Wechat</div>
-        <div style="font-size:13px;color:var(--muted)">Random live cams — swipe up to meet</div>
-      </div>
-    </div>
-    <div id="splashHint">Initializing — requesting camera...</div>
-  </div>
-
-  <div id="app">
-    <div class="topBar">
-      <div style="font-weight:700">Wechat</div>
-      <div class="status" id="statusText">Searching...</div>
+    <!-- Splash Screen -->
+    <div id="splash" class="splash">
+        <div class="splash-content">
+            <img src="assets/logo.svg" alt="Vibe Logo" class="splash-logo">
+            <h1 class="splash-title">Vibe</h1>
+            <div class="loading-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
     </div>
 
-    <div id="reel" class="reel" role="list"></div>
+    <!-- Main App -->
+    <div id="app" class="app hidden">
+        <!-- Ad Slot -->
+        <div id="ads-slot" class="ads-slot">
+            <!-- Ad content will be injected here -->
+        </div>
 
-    <div class="selfCam">
-      <video id="localVideo" autoplay playsinline muted></video>
+        <!-- Status Bar -->
+        <div id="status" class="status">
+            <span id="status-text">Initializing...</span>
+        </div>
+
+        <!-- Video Container -->
+        <div class="video-container">
+            <!-- Remote Video -->
+            <video id="remoteVideo" class="remote-video" autoplay playsinline muted></video>
+            
+            <!-- Local Video (Mini Cam) -->
+            <div id="localVideoContainer" class="local-video-container">
+                <video id="localVideo" class="local-video" autoplay playsinline muted></video>
+            </div>
+
+            <!-- Swipe Indicator -->
+            <div id="swipeIndicator" class="swipe-indicator hidden">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5L12 19M5 12L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>Swipe up for next</span>
+            </div>
+        </div>
+
+        <!-- Control Bar -->
+        <div class="control-bar">
+            <button id="micBtn" class="control-btn" aria-label="Toggle microphone">
+                <svg class="icon mic-on" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2C13.1 2 14 2.9 14 4V12C14 13.1 13.1 14 12 14C10.9 14 10 13.1 10 12V4C10 2.9 10.9 2 12 2ZM19 10V12C19 15.3 16.3 18 13 18V20H11V18C7.7 18 5 15.3 5 12V10H7V12C7 14.2 8.8 16 11 16H13C15.2 16 17 14.2 17 12V10H19Z" fill="currentColor"/>
+                </svg>
+                <svg class="icon mic-off hidden" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M19 10V12C19 15.3 16.3 18 13 18V20H11V18C7.7 18 5 15.3 5 12V10H7V12C7 14.2 8.8 16 11 16H13C15.2 16 17 14.2 17 12V10H19ZM21 2L3 20L4.41 21.41L22.41 4.41L21 2ZM14 12.88L10.12 9C10.04 9.32 10 9.65 10 10V12C10 13.1 10.9 14 12 14C12.35 14 12.65 13.92 12.88 13.8L14 12.88Z" fill="currentColor"/>
+                </svg>
+            </button>
+
+            <button id="cameraBtn" class="control-btn" aria-label="Toggle camera">
+                <svg class="icon camera-on" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 9C10.9 9 10 9.9 10 11C10 12.1 10.9 13 12 13C13.1 13 14 12.1 14 11C14 9.9 13.1 9 12 9ZM20 4H16.5L15 2H9L7.5 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM12 17C8.7 17 6 14.3 6 11C6 7.7 8.7 5 12 5C15.3 5 18 7.7 18 11C18 14.3 15.3 17 12 17Z" fill="currentColor"/>
+                </svg>
+                <svg class="icon camera-off hidden" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 4H16.5L15 2H9L7.5 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM12 17C8.7 17 6 14.3 6 11C6 7.7 8.7 5 12 5C15.3 5 18 7.7 18 11C18 14.3 15.3 17 12 17ZM21 2L3 20L4.41 21.41L22.41 4.41L21 2Z" fill="currentColor"/>
+                </svg>
+            </button>
+
+            <button id="likeBtn" class="control-btn like-btn" aria-label="Like">
+                <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 21.35L10.55 20.03C5.4 15.36 2 12.27 2 8.5C2 5.41 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.08C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.41 22 8.5C22 12.27 18.6 15.36 13.45 20.03L12 21.35Z" fill="currentColor"/>
+                </svg>
+            </button>
+
+            <button id="dislikeBtn" class="control-btn dislike-btn" aria-label="Dislike">
+                <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M15 3H6C5.17 3 4.46 3.5 4.16 4.22L1.14 11.27C1.05 11.46 1 11.67 1 11.88V13C1 14.1 1.9 15 3 15H9.31L8.36 19.77C8.34 19.86 8.33 19.95 8.33 20.04C8.33 20.46 8.5 20.85 8.77 21.12L9.83 22.17L16.41 15.59C16.78 15.22 17 14.73 17 14.17V5C17 3.9 16.1 3 15 3Z" fill="currentColor"/>
+                </svg>
+            </button>
+
+            <button id="reportBtn" class="control-btn report-btn" aria-label="Report">
+                <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M14.4 6L14 4H5V21H7V14H12.6L13 16H20V6H14.4Z" fill="currentColor"/>
+                </svg>
+            </button>
+
+            <button id="nextBtn" class="control-btn next-btn" aria-label="Next">
+                <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Premium Banner -->
+        <div id="premiumBanner" class="premium-banner">
+            <span>✨ Go Premium</span>
+        </div>
+
+        <!-- Debug Panel -->
+        <div id="debugPanel" class="debug-panel hidden">
+            <h3>Debug Info</h3>
+            <div id="debugInfo"></div>
+        </div>
     </div>
 
-    <div class="controls">
-      <div class="likeCount" id="likeCounter">❤ 0</div>
-      <button class="btn" id="camToggle" title="Toggle Camera">📷</button>
-      <button class="btn primary" id="nextBtn" title="Next">⤴️</button>
-      <button class="btn" id="micToggle" title="Toggle Mic">🎙️</button>
-      <button class="btn" id="reportBtn" title="Report">🚩</button>
-    </div>
-
-    <div id="loader" class="loader hidden"><div class="pulse"></div></div>
-  </div>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-  <script>
-  /************ CONFIGURE FIREBASE (keep your config) ************/
-  const firebaseConfig = {
-    apiKey: "AIzaSyBT0umyu-D_BC6KC_e07DhwqhbQB7dAs3Y",
-    authDomain: "randomvideochat-af8bb.firebaseapp.com",
-    databaseURL: "https://randomvideochat-af8bb-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "randomvideochat-af8bb",
-    storageBucket: "randomvideochat-af8bb.appspot.com",
-    messagingSenderId: "162637738009",
-    appId: "1:162637738009:web:25decd4fb7ff1900cafa88"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  /************ ICE CONFIG (temporary) ************/
-  let iceConfig = {
-    iceServers: [
-      {urls:'stun:stun.l.google.com:19302'},
-      {urls:'turn:openrelay.metered.ca:80', username:'openrelayproject', credential:'openrelayproject'}
-    ]
-  };
-
-  /************ APP STATE ************/
-  const splash = document.getElementById('splash');
-  const splashHint = document.getElementById('splashHint');
-  const app = document.getElementById('app');
-  const reel = document.getElementById('reel');
-  const localVideo = document.getElementById('localVideo');
-  const statusText = document.getElementById('statusText');
-  const loader = document.getElementById('loader');
-  const likeCounter = document.getElementById('likeCounter');
-
-  const nextBtn = document.getElementById('nextBtn');
-  const micToggle = document.getElementById('micToggle');
-  const camToggle = document.getElementById('camToggle');
-  const reportBtn = document.getElementById('reportBtn');
-
-  let uid = localStorage.getItem('wc_uid') || null;
-  if (!uid){ uid = Math.random().toString(36).substr(2,9); localStorage.setItem('wc_uid', uid); }
-  let pc = null, localStream = null, roomId = null, role = null;
-  let lastAction = null, currentLikes = 0;
-  let pairedWith = null; // other uid
-
-  function showLoader(v){ loader.classList.toggle('hidden', !v); }
-  function setStatus(t){ statusText.textContent = t || 'Idle'; }
-
-  /************ Start up ************/
-  (async function boot(){
-    try{
-      splashHint.textContent = 'Requesting camera & microphone...';
-      await initLocalMedia();
-      splashHint.textContent = 'Connected — finding strangers...';
-      setTimeout(()=>{ splash.style.display='none'; app.style.display='block'; }, 700);
-      joinQueueAndFind();
-      setupUI();
-    }catch(e){
-      console.error(e);
-      splashHint.textContent = 'Camera/mic blocked. Reload and allow permissions.';
-    }
-  })();
-
-  async function initLocalMedia(){
-    localStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:'user', width:{ideal:640}}, audio:true });
-    localVideo.srcObject = localStream;
-  }
-
-  /************ Matchmaking (improved atomic reserve) ************/
-  async function joinQueueAndFind(){
-    setStatus('Joining queue...');
-    const myQueueRef = db.ref('queue/' + uid);
-    await myQueueRef.set({ ts: Date.now() });
-    myQueueRef.onDisconnect().remove();
-
-    // scan queue for candidate (ordered by push key)
-    const qSnap = await db.ref('queue').once('value');
-    const q = qSnap.val() || {};
-    const other = Object.keys(q).find(k => k !== uid);
-
-    if (other){
-      // attempt to reserve 'other' atomically to avoid race
-      const otherRef = db.ref('queue/' + other + '/reservedBy');
-      const res = await otherRef.transaction(curr => {
-        if (curr === null) return uid; // claim them
-        return; // abort if already claimed
-      }, (err, committed, snapshot) => {});
-      // read final value
-      const final = (await otherRef.once('value')).val();
-      if (final === uid){
-        // success — create room
-        const rid = 'r_' + Math.random().toString(36).substr(2,9);
-        await db.ref('rooms/' + rid).set({ created: Date.now(), createdBy: uid, partner: other });
-        // mark matches for both
-        await db.ref('matches/' + uid).set(rid);
-        await db.ref('matches/' + other).set(rid);
-        // cleanup queue
-        await db.ref('queue/' + other).remove();
-        await db.ref('queue/' + uid).remove();
-        listenMatch(); // will pick up and start room
-        return;
-      } else {
-        // claimed by someone else, wait for match from database
-        listenMatch();
-        setStatus('Waiting for stranger...');
-        return;
-      }
-    } else {
-      // no one in queue, listen for match
-      listenMatch();
-      setStatus('Waiting for stranger...');
-      return;
-    }
-  }
-
-  function listenMatch(){
-    const mRef = db.ref('matches/' + uid);
-    mRef.on('value', async snap => {
-      const rid = snap.val();
-      if (rid){
-        mRef.off();
-        await startRoom(rid);
-      }
-    });
-  }
-
-  /************ Room start logic ************/
-  async function startRoom(rid){
-    roomId = rid;
-    setStatus('Matched! Connecting...');
-    showLoader(true);
-    currentLikes = 0; likeCounter.innerText = '❤ 0';
-
-    const roomRef = db.ref('rooms/' + roomId);
-    const roomSnap = await roomRef.once('value');
-    const room = roomSnap.val() || {};
-
-    // check if offer exists
-    if (!room.offer){
-      role = 'caller';
-      await createRoomAsCaller(roomId);
-    } else {
-      role = 'callee';
-      await joinRoomAsCallee(roomId, room.offer);
-    }
-
-    showLoader(false);
-  }
-
-  function createPeerConnection(){
-    const pc = new RTCPeerConnection(iceConfig);
-    pc.ontrack = e => { renderRemoteStream(e.streams[0]); };
-    pc.onicecandidate = ev => {
-      if (!ev.candidate) return;
-      if (!roomId) return;
-      const path = role === 'caller' ? `rooms/${roomId}/callerCandidates` : `rooms/${roomId}/calleeCandidates`;
-      db.ref(path).push(ev.candidate.toJSON());
-    };
-    return pc;
-  }
-
-  async function createRoomAsCaller(rid){
-    pc = createPeerConnection();
-    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    const roomRef = db.ref('rooms/' + rid);
-    await roomRef.update({ offer: offer.toJSON(), createdBy: uid });
-
-    roomRef.child('answer').on('value', async s => {
-      const ans = s.val();
-      if (ans && !pc.currentRemoteDescription) await pc.setRemoteDescription(new RTCSessionDescription(ans)).then(()=>setStatus('Connected')).catch(()=>{});
-    });
-
-    db.ref(`rooms/${rid}/calleeCandidates`).on('child_added', async snap => {
-      const c = snap.val();
-      if (c) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
-    });
-  }
-
-  async function joinRoomAsCallee(rid, offerObj){
-    pc = createPeerConnection();
-    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    const offerDesc = new RTCSessionDescription(offerObj);
-    await pc.setRemoteDescription(offerDesc);
-    const ans = await pc.createAnswer();
-    await pc.setLocalDescription(ans);
-    const roomRef = db.ref('rooms/' + rid);
-    await roomRef.update({ answer: ans.toJSON(), answeredBy: uid });
-
-    db.ref(`rooms/${rid}/callerCandidates`).on('child_added', async snap => {
-      const c = snap.val();
-      if (c) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
-    });
-    setStatus('Connected');
-  }
-
-  /************ Render remote camera into the reel ************/
-  function renderRemoteStream(stream){
-    // clear and display single full-screen card
-    reel.innerHTML = '';
-    const card = document.createElement('div'); card.className = 'card';
-    const v = document.createElement('video'); v.className='remote'; v.autoplay=true; v.playsInline=true; v.srcObject = stream;
-    card.appendChild(v);
-
-    // small like badge
-    const lb = document.createElement('div'); lb.style.position='absolute'; lb.style.left='18px'; lb.style.bottom='24px'; lb.style.fontWeight='800'; lb.style.fontSize='18px'; lb.style.textShadow='0 6px 18px rgba(0,0,0,0.6)'; lb.id='cardLike'; lb.innerText='❤ 0';
-    card.appendChild(lb);
-
-    // simple info overlay
-    const info = document.createElement('div'); info.style.position='absolute'; info.style.left='18px'; info.style.top='18px'; info.style.fontSize='13px'; info.style.color='#fff'; info.innerText='Stranger';
-    card.appendChild(info);
-
-    reel.appendChild(card);
-    card.scrollIntoView({behavior:'smooth'});
-  }
-
-  /************ Next / cleanup flow ************/
-  async function nextStranger(){
-    setStatus('Switching...');
-    // save feedback
-    if (roomId){
-      await db.ref(`feedback/${roomId}/${uid}`).set({ liked: lastAction==='like' ? 1 : 0, ts: Date.now() }).catch(()=>{});
-    }
-    cleanupRoom();
-    // small debounce
-    setTimeout(()=> joinQueueAndFind(), 400);
-  }
-
-  function cleanupRoom(){
-    // remove match pointer
-    db.ref('matches/' + uid).remove().catch(()=>{});
-    // remove listeners
-    if (roomId){
-      db.ref(`rooms/${roomId}/callerCandidates`).off();
-      db.ref(`rooms/${roomId}/calleeCandidates`).off();
-      db.ref(`rooms/${roomId}/answer`).off();
-      db.ref(`rooms/${roomId}/offer`).off();
-    }
-    if (pc){
-      try{ pc.getSenders().forEach(s=> s.track && s.track.stop()); }catch(e){}
-      try{ pc.close(); }catch(e){}
-      pc = null;
-    }
-    reel.innerHTML = '';
-    roomId=null; role=null; pairedWith=null; lastAction=null;
-    setStatus('Searching...');
-  }
-
-  /************ Likes / Dislikes / Report ************/
-  likeCounter.addEventListener('click', async ()=>{
-    lastAction='like'; currentLikes++; likeCounter.innerText = `❤ ${currentLikes}`;
-    const cardLike = document.getElementById('cardLike'); if (cardLike) cardLike.innerText = `❤ ${currentLikes}`;
-    if (roomId) await db.ref(`feedback/${roomId}/${uid}`).set({ liked:1, ts:Date.now()}).catch(()=>{});
-  });
-
-  micToggle.addEventListener('click', ()=>{
-    if (!localStream) return;
-    const audioTrack = localStream.getAudioTracks()[0];
-    if (!audioTrack) return;
-    audioTrack.enabled = !audioTrack.enabled;
-    micToggle.innerText = audioTrack.enabled ? '🎙️' : '🔇';
-  });
-
-  camToggle.addEventListener('click', ()=>{
-    if (!localStream) return;
-    const v = localStream.getVideoTracks()[0];
-    if (!v) return;
-    v.enabled = !v.enabled;
-    camToggle.innerText = v.enabled ? '📷' : '🚫';
-  });
-
-  reportBtn.addEventListener('click', async ()=>{
-    if (!roomId) return alert('No active match to report');
-    // increment report count simple
-    await db.ref(`reports/${roomId}`).transaction(curr => (curr||0)+1);
-    alert('Reported — thank you. We\'ll review this user.');
-    nextStranger();
-  });
-
-  /************ UI events ************/
-  nextBtn.addEventListener('click', nextStranger);
-
-  /* swipe to next detection */
-  let yStart=null;
-  reel.addEventListener('touchstart', e=>{ yStart = e.touches[0].clientY; });
-  reel.addEventListener('touchend', e=>{
-    if (yStart===null) return;
-    const yEnd = (e.changedTouches && e.changedTouches[0].clientY) || 0;
-    const delta = yStart - yEnd;
-    if (delta > 80) nextStranger();
-    yStart = null;
-  });
-
-  /* ensure cleanup on unload */
-  window.addEventListener('beforeunload', ()=> {
-    try{ db.ref('queue/' + uid).remove(); db.ref('matches/' + uid).remove(); }catch(e){}
-  });
-
-  function setupUI(){ setStatus('Ready'); }
-
-  </script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- App Scripts -->
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
+
