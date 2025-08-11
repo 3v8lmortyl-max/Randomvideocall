@@ -1,0 +1,22 @@
+{
+  "name": "Vibe - Random Video Chat",
+  "short_name": "Vibe",
+  "description": "Instagram Reels style random 1:1 live video chat",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#6366f1",
+  "background_color": "#667eea",
+  "categories": ["social", "entertainment"],
+  "icons": [
+    {
+      "src": "assets/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr"
+}
