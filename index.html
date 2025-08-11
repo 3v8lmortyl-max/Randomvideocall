@@ -1,445 +1,390 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Wechat — Random Video Reels</title>
+  <meta name="description" content="Wechat — swipe to meet random people by live camera. Minimal, mobile-first."/>
   <style>
     :root{
-      --bg:#0f1724;
-      --accent:#22c1c3;
-      --muted:#94a3b8;
-      --card:#0b1220;
+      --bg1:#041022; --bg2:#071428; --accent:#22c1c3; --muted:#94a3b8;
     }
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,#061020,#071428);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#fff;overflow:hidden}
     /* Splash */
-    #splash{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;z-index:40;background:linear-gradient(180deg,rgba(2,6,23,0.95),rgba(2,6,23,0.8));backdrop-filter:blur(4px)}
-    #logo{font-weight:800;font-size:40px;letter-spacing:1px;display:flex;align-items:center;gap:12px}
-    #logo .dot{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#5eead4);display:flex;align-items:center;justify-content:center;color:#002; font-weight:900}
-    #logo small{font-size:12px;color:var(--muted);display:block;margin-top:6px;text-align:center}
+    #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:60;backdrop-filter:blur(2px)}
+    #logo{display:flex;align-items:center;gap:12px}
+    .logoMark{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px;background:linear-gradient(135deg,var(--accent),#60a5fa);color:#012}
+    #logoTitle{font-size:26px;font-weight:700}
+    #splashHint{margin-top:12px;color:var(--muted);font-size:13px}
 
-    /* Reel container */
-    #app{height:100%;display:none;position:relative;overflow:hidden}
-    .reel{height:100%;width:100%;scroll-snap-type:y mandatory;overflow-y:scroll;-webkit-overflow-scrolling:touch}
+    /* App layout */
+    #app{height:100%;display:none;position:relative}
+    .reel{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch}
     .card{height:100vh;scroll-snap-align:start;position:relative;display:flex;align-items:center;justify-content:center}
-    
-    video.remote{width:100%;height:100%;object-fit:cover;border-radius:0;filter:brightness(0.95) contrast(1.03)}
-    .selfCam{position:absolute;top:18px;right:16px;width:110px;height:160px;border-radius:10px;overflow:hidden;border:2px solid rgba(255,255,255,0.08);box-shadow:0 6px 20px rgba(2,6,23,0.6)}
-    .overlayControls{position:absolute;left:0;right:0;bottom:36px;display:flex;justify-content:center;gap:18px;align-items:center;z-index:10}
-    .btn{width:64px;height:64px;border-radius:999px;border:none;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;background:rgba(255,255,255,0.06);color:white}
-    .btn.primary{background:linear-gradient(135deg,var(--accent),#60a5fa);color:#001}
-    .likeCount{position:absolute;left:18px;bottom:24px;color:white;font-weight:600;text-shadow:0 2px 12px rgba(0,0,0,0.6)}
-    .dislike{opacity:0.85}
-    .topBar{position:absolute;left:10px;top:14px;color:white;z-index:12}
+    video.remote{width:100%;height:100%;object-fit:cover;filter:brightness(.95) saturate(1.02)}
+    .selfCam{position:absolute;top:18px;right:14px;width:110px;height:150px;border-radius:12px;overflow:hidden;border:2px solid rgba(255,255,255,0.06);box-shadow:0 8px 24px rgba(0,0,0,0.6);z-index:30}
+    .selfCam video{width:100%;height:100%;object-fit:cover}
+
+    .topBar{position:absolute;left:12px;top:10px;z-index:30}
     .status{font-size:13px;color:var(--muted);margin-top:6px}
+
+    .controls{position:absolute;left:0;right:0;bottom:32px;display:flex;justify-content:center;gap:14px;z-index:30}
+    .btn{width:64px;height:64px;border-radius:999px;border:none;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;background:rgba(255,255,255,0.06);color:#fff}
+    .btn.primary{background:linear-gradient(135deg,var(--accent),#60a5fa);color:#012}
+    .likeCount{position:absolute;left:18px;bottom:24px;color:#fff;font-weight:700;text-shadow:0 4px 12px rgba(0,0,0,0.6);z-index:32}
+
+    .loader{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:40;pointer-events:none}
+    .pulse{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#60a5fa);animation:pulse 1.2s infinite}
+    @keyframes pulse{0%{transform:scale(.9)}50%{transform:scale(1.15)}100%{transform:scale(.9)}}
 
     /* small helpers */
     .hidden{display:none}
-    .loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
-    .pulse{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#60a5fa);opacity:.9;animation:pulse 1.2s infinite}
-    @keyframes pulse{0%{transform:scale(0.9);opacity:.9}50%{transform:scale(1.15);opacity:.6}100%{transform:scale(0.9);opacity:.9}}
+    .reportBtn{position:absolute;right:16px;top:16px;background:rgba(0,0,0,0.3);padding:8px 10px;border-radius:8px;font-size:13px}
 
-    /* small responsive tweaks */
-    @media (min-width:900px){
-      .selfCam{width:160px;height:220px}
+    @media(min-width:900px){
+      .selfCam{width:180px;height:240px}
       .btn{width:72px;height:72px}
     }
-
-    /* simple icons */
-    .icon{font-size:22px}
   </style>
 </head>
 <body>
 
-  <!-- Splash screen -->
   <div id="splash">
     <div id="logo">
-      <div class="dot">W</div>
-      <div style="text-align:left">
-        <div style="font-size:22px">Wechat</div>
-        <small>Random video reels — swipe to meet strangers</small>
+      <div class="logoMark">W</div>
+      <div>
+        <div id="logoTitle">Wechat</div>
+        <div style="font-size:13px;color:var(--muted)">Random live cams — swipe up to meet</div>
       </div>
     </div>
-    <div style="height:26px"></div>
-    <div class="status" id="splashHint">Connecting to Firebase...</div>
+    <div id="splashHint">Initializing — requesting camera...</div>
   </div>
 
-  <!-- App -->
   <div id="app">
     <div class="topBar">
-      <div style="font-weight:700;color:white">Wechat</div>
-      <div class="status" id="userStatus">Searching...</div>
+      <div style="font-weight:700">Wechat</div>
+      <div class="status" id="statusText">Searching...</div>
     </div>
 
-    <div id="reel" class="reel"></div>
+    <div id="reel" class="reel" role="list"></div>
 
     <div class="selfCam">
-      <video id="localVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+      <video id="localVideo" autoplay playsinline muted></video>
     </div>
 
-    <div class="overlayControls">
-      <div class="likeCount" id="likeCount">❤ 0</div>
-      <button class="btn dislike" id="dislikeBtn" title="Dislike">👎</button>
-      <button class="btn primary" id="nextBtn" title="Next Stranger">⤴️</button>
-      <button class="btn" id="likeBtn" title="Like">👍</button>
+    <div class="controls">
+      <div class="likeCount" id="likeCounter">❤ 0</div>
+      <button class="btn" id="camToggle" title="Toggle Camera">📷</button>
+      <button class="btn primary" id="nextBtn" title="Next">⤴️</button>
+      <button class="btn" id="micToggle" title="Toggle Mic">🎙️</button>
+      <button class="btn" id="reportBtn" title="Report">🚩</button>
     </div>
 
-    <div id="loader" class="loading hidden"><div class="pulse"></div></div>
+    <div id="loader" class="loader hidden"><div class="pulse"></div></div>
   </div>
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-/* =========================
-   CONFIGURE FIREBASE BELOW
-   ========================= */
-const firebaseConfig = {
-  apiKey: "AIzaSyBT0umyu-D_BC6KC_e07DhwqhbQB7dAs3Y",
-  authDomain: "randomvideochat-af8bb.firebaseapp.com",
-  databaseURL: "https://randomvideochat-af8bb-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "randomvideochat-af8bb",
-  storageBucket: "randomvideochat-af8bb.appspot.com",
-  messagingSenderId: "162637738009",
-  appId: "1:162637738009:web:25decd4fb7ff1900cafa88"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+  /************ CONFIGURE FIREBASE (keep your config) ************/
+  const firebaseConfig = {
+    apiKey: "AIzaSyBT0umyu-D_BC6KC_e07DhwqhbQB7dAs3Y",
+    authDomain: "randomvideochat-af8bb.firebaseapp.com",
+    databaseURL: "https://randomvideochat-af8bb-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "randomvideochat-af8bb",
+    storageBucket: "randomvideochat-af8bb.appspot.com",
+    messagingSenderId: "162637738009",
+    appId: "1:162637738009:web:25decd4fb7ff1900cafa88"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-/* ICE servers - for testing only (replace with your own TURN later) */
-let iceConfig = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }
-  ]
-};
-
-/* ===============
-   App variables
-   =============== */
-const splash = document.getElementById('splash');
-const app = document.getElementById('app');
-const reel = document.getElementById('reel');
-const localVideo = document.getElementById('localVideo');
-const nextBtn = document.getElementById('nextBtn');
-const likeBtn = document.getElementById('likeBtn');
-const dislikeBtn = document.getElementById('dislikeBtn');
-const userStatus = document.getElementById('userStatus');
-const likeCountEl = document.getElementById('likeCount');
-const loader = document.getElementById('loader');
-const splashHint = document.getElementById('splashHint');
-
-let localStream = null;
-let pc = null;
-let roomId = null;
-let role = null; // "caller" or "callee"
-let uid = localStorage.getItem('wc_uid') || null;
-if (!uid) {
-  uid = Math.random().toString(36).substr(2,9);
-  localStorage.setItem('wc_uid', uid);
-}
-
-/* small like counter for current stranger */
-let currentLikes = 0;
-
-/* ===============
-   Helper utils
-   =============== */
-function showLoader(show){ loader.classList.toggle('hidden', !show); }
-function updateStatus(t){ userStatus.textContent = t || 'Idle'; }
-function nowSec(){ return Math.floor(Date.now()/1000); }
-
-/* ===============
-   Start flow
-   =============== */
-(async function start(){
-  try{
-    splashHint.textContent = 'Requesting camera & microphone...';
-    await initLocalStream();
-    splashHint.textContent = 'Connected. Searching for strangers...';
-    // brief splash delay for brand impression
-    setTimeout(()=>{ splash.style.display='none'; app.style.display='block'; }, 800);
-    joinQueueAndFind();
-    setupUI();
-  }catch(err){
-    console.error(err);
-    splashHint.textContent = 'Camera permission denied or error. Reload and allow camera.';
-  }
-})();
-
-/* =====================
-   Local media init
-   ===================== */
-async function initLocalStream(){
-  localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user', width:{ideal:640} }, audio:true });
-  localVideo.srcObject = localStream;
-}
-
-/* =====================
-   Matchmaking: queue-based
-   =====================
-   Strategy (client-only, zero-cost):
-   - Each client writes entry under /queue/{uid} with timestamp
-   - Client checks snapshot for other uid; if found, create a room and write /matches/{uid}=roomId for both
-   - Using optimistic approach (race possible) — acceptable for prototype
-   ===================== */
-async function joinQueueAndFind(){
-  updateStatus('Joining queue...');
-  const queueRef = db.ref('queue/' + uid);
-  await queueRef.set({ ts: nowSec() });
-  queueRef.onDisconnect().remove();
-
-  // Try to find a partner immediately
-  const qSnap = await db.ref('queue').once('value');
-  const q = qSnap.val() || {};
-  const other = Object.keys(q).find(k => k !== uid);
-  if (other){
-    // create room and set matches for both
-    const rid = 'room_' + Math.random().toString(36).substr(2,9);
-    await db.ref('rooms/' + rid).set({ created: nowSec() });
-    await db.ref('matches/' + uid).set(rid);
-    await db.ref('matches/' + other).set(rid);
-    // remove both from queue
-    await db.ref('queue/' + other).remove();
-    await db.ref('queue/' + uid).remove();
-    listenMatch(); // will handle join
-  } else {
-    // wait for match set by other user
-    listenMatch();
-    updateStatus('Waiting for stranger...');
-  }
-}
-
-/* Listen for a match for this user */
-function listenMatch(){
-  const mRef = db.ref('matches/' + uid);
-  mRef.on('value', async snap => {
-    const rid = snap.val();
-    if (rid){
-      mRef.off();
-      await startRoom(rid);
-    }
-  });
-}
-
-/* Start a room: determine if we should create offer or join (check if room.offer exists) */
-async function startRoom(rid){
-  roomId = rid;
-  updateStatus('Matched! Connecting...');
-  showLoader(true);
-
-  const roomRef = db.ref('rooms/' + roomId);
-  const roomSnap = await roomRef.once('value');
-  const roomData = roomSnap.val() || {};
-
-  // remove ephemeral likes counter for safety
-  currentLikes = 0;
-  likeCountEl.textContent = '❤ 0';
-
-  if (!roomData.offer){
-    // we are caller (create offer)
-    role = 'caller';
-    await createRoomAsCaller(roomId);
-  } else {
-    // we are callee (join)
-    role = 'callee';
-    await joinRoomAsCallee(roomId, roomData.offer);
-  }
-
-  showLoader(false);
-}
-
-/* create peer helper */
-function createPeerConnection(){
-  const peer = new RTCPeerConnection(iceConfig);
-
-  peer.ontrack = e => {
-    // place a new reel card with remote video -> replace previous top card
-    renderRemoteStream(e.streams[0]);
+  /************ ICE CONFIG (temporary) ************/
+  let iceConfig = {
+    iceServers: [
+      {urls:'stun:stun.l.google.com:19302'},
+      {urls:'turn:openrelay.metered.ca:80', username:'openrelayproject', credential:'openrelayproject'}
+    ]
   };
 
-  peer.onicecandidate = event => {
-    if (!event.candidate) return;
-    if (!roomId) return;
-    const path = (role === 'caller') ? `rooms/${roomId}/callerCandidates` : `rooms/${roomId}/calleeCandidates`;
-    db.ref(path).push(event.candidate.toJSON());
-  };
+  /************ APP STATE ************/
+  const splash = document.getElementById('splash');
+  const splashHint = document.getElementById('splashHint');
+  const app = document.getElementById('app');
+  const reel = document.getElementById('reel');
+  const localVideo = document.getElementById('localVideo');
+  const statusText = document.getElementById('statusText');
+  const loader = document.getElementById('loader');
+  const likeCounter = document.getElementById('likeCounter');
 
-  return peer;
-}
+  const nextBtn = document.getElementById('nextBtn');
+  const micToggle = document.getElementById('micToggle');
+  const camToggle = document.getElementById('camToggle');
+  const reportBtn = document.getElementById('reportBtn');
 
-/* Create room as caller */
-async function createRoomAsCaller(rid){
-  pc = createPeerConnection();
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  let uid = localStorage.getItem('wc_uid') || null;
+  if (!uid){ uid = Math.random().toString(36).substr(2,9); localStorage.setItem('wc_uid', uid); }
+  let pc = null, localStream = null, roomId = null, role = null;
+  let lastAction = null, currentLikes = 0;
+  let pairedWith = null; // other uid
 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
+  function showLoader(v){ loader.classList.toggle('hidden', !v); }
+  function setStatus(t){ statusText.textContent = t || 'Idle'; }
 
-  // write offer to DB
-  const roomRef = db.ref('rooms/' + rid);
-  await roomRef.update({ offer: offer.toJSON(), createdBy: uid });
-
-  // listen for answer
-  roomRef.child('answer').on('value', async snap => {
-    const ans = snap.val();
-    if (ans && !pc.currentRemoteDescription){
-      await pc.setRemoteDescription(new RTCSessionDescription(ans));
-      updateStatus('Connected');
+  /************ Start up ************/
+  (async function boot(){
+    try{
+      splashHint.textContent = 'Requesting camera & microphone...';
+      await initLocalMedia();
+      splashHint.textContent = 'Connected — finding strangers...';
+      setTimeout(()=>{ splash.style.display='none'; app.style.display='block'; }, 700);
+      joinQueueAndFind();
+      setupUI();
+    }catch(e){
+      console.error(e);
+      splashHint.textContent = 'Camera/mic blocked. Reload and allow permissions.';
     }
+  })();
+
+  async function initLocalMedia(){
+    localStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:'user', width:{ideal:640}}, audio:true });
+    localVideo.srcObject = localStream;
+  }
+
+  /************ Matchmaking (improved atomic reserve) ************/
+  async function joinQueueAndFind(){
+    setStatus('Joining queue...');
+    const myQueueRef = db.ref('queue/' + uid);
+    await myQueueRef.set({ ts: Date.now() });
+    myQueueRef.onDisconnect().remove();
+
+    // scan queue for candidate (ordered by push key)
+    const qSnap = await db.ref('queue').once('value');
+    const q = qSnap.val() || {};
+    const other = Object.keys(q).find(k => k !== uid);
+
+    if (other){
+      // attempt to reserve 'other' atomically to avoid race
+      const otherRef = db.ref('queue/' + other + '/reservedBy');
+      const res = await otherRef.transaction(curr => {
+        if (curr === null) return uid; // claim them
+        return; // abort if already claimed
+      }, (err, committed, snapshot) => {});
+      // read final value
+      const final = (await otherRef.once('value')).val();
+      if (final === uid){
+        // success — create room
+        const rid = 'r_' + Math.random().toString(36).substr(2,9);
+        await db.ref('rooms/' + rid).set({ created: Date.now(), createdBy: uid, partner: other });
+        // mark matches for both
+        await db.ref('matches/' + uid).set(rid);
+        await db.ref('matches/' + other).set(rid);
+        // cleanup queue
+        await db.ref('queue/' + other).remove();
+        await db.ref('queue/' + uid).remove();
+        listenMatch(); // will pick up and start room
+        return;
+      } else {
+        // claimed by someone else, wait for match from database
+        listenMatch();
+        setStatus('Waiting for stranger...');
+        return;
+      }
+    } else {
+      // no one in queue, listen for match
+      listenMatch();
+      setStatus('Waiting for stranger...');
+      return;
+    }
+  }
+
+  function listenMatch(){
+    const mRef = db.ref('matches/' + uid);
+    mRef.on('value', async snap => {
+      const rid = snap.val();
+      if (rid){
+        mRef.off();
+        await startRoom(rid);
+      }
+    });
+  }
+
+  /************ Room start logic ************/
+  async function startRoom(rid){
+    roomId = rid;
+    setStatus('Matched! Connecting...');
+    showLoader(true);
+    currentLikes = 0; likeCounter.innerText = '❤ 0';
+
+    const roomRef = db.ref('rooms/' + roomId);
+    const roomSnap = await roomRef.once('value');
+    const room = roomSnap.val() || {};
+
+    // check if offer exists
+    if (!room.offer){
+      role = 'caller';
+      await createRoomAsCaller(roomId);
+    } else {
+      role = 'callee';
+      await joinRoomAsCallee(roomId, room.offer);
+    }
+
+    showLoader(false);
+  }
+
+  function createPeerConnection(){
+    const pc = new RTCPeerConnection(iceConfig);
+    pc.ontrack = e => { renderRemoteStream(e.streams[0]); };
+    pc.onicecandidate = ev => {
+      if (!ev.candidate) return;
+      if (!roomId) return;
+      const path = role === 'caller' ? `rooms/${roomId}/callerCandidates` : `rooms/${roomId}/calleeCandidates`;
+      db.ref(path).push(ev.candidate.toJSON());
+    };
+    return pc;
+  }
+
+  async function createRoomAsCaller(rid){
+    pc = createPeerConnection();
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    const roomRef = db.ref('rooms/' + rid);
+    await roomRef.update({ offer: offer.toJSON(), createdBy: uid });
+
+    roomRef.child('answer').on('value', async s => {
+      const ans = s.val();
+      if (ans && !pc.currentRemoteDescription) await pc.setRemoteDescription(new RTCSessionDescription(ans)).then(()=>setStatus('Connected')).catch(()=>{});
+    });
+
+    db.ref(`rooms/${rid}/calleeCandidates`).on('child_added', async snap => {
+      const c = snap.val();
+      if (c) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
+    });
+  }
+
+  async function joinRoomAsCallee(rid, offerObj){
+    pc = createPeerConnection();
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    const offerDesc = new RTCSessionDescription(offerObj);
+    await pc.setRemoteDescription(offerDesc);
+    const ans = await pc.createAnswer();
+    await pc.setLocalDescription(ans);
+    const roomRef = db.ref('rooms/' + rid);
+    await roomRef.update({ answer: ans.toJSON(), answeredBy: uid });
+
+    db.ref(`rooms/${rid}/callerCandidates`).on('child_added', async snap => {
+      const c = snap.val();
+      if (c) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
+    });
+    setStatus('Connected');
+  }
+
+  /************ Render remote camera into the reel ************/
+  function renderRemoteStream(stream){
+    // clear and display single full-screen card
+    reel.innerHTML = '';
+    const card = document.createElement('div'); card.className = 'card';
+    const v = document.createElement('video'); v.className='remote'; v.autoplay=true; v.playsInline=true; v.srcObject = stream;
+    card.appendChild(v);
+
+    // small like badge
+    const lb = document.createElement('div'); lb.style.position='absolute'; lb.style.left='18px'; lb.style.bottom='24px'; lb.style.fontWeight='800'; lb.style.fontSize='18px'; lb.style.textShadow='0 6px 18px rgba(0,0,0,0.6)'; lb.id='cardLike'; lb.innerText='❤ 0';
+    card.appendChild(lb);
+
+    // simple info overlay
+    const info = document.createElement('div'); info.style.position='absolute'; info.style.left='18px'; info.style.top='18px'; info.style.fontSize='13px'; info.style.color='#fff'; info.innerText='Stranger';
+    card.appendChild(info);
+
+    reel.appendChild(card);
+    card.scrollIntoView({behavior:'smooth'});
+  }
+
+  /************ Next / cleanup flow ************/
+  async function nextStranger(){
+    setStatus('Switching...');
+    // save feedback
+    if (roomId){
+      await db.ref(`feedback/${roomId}/${uid}`).set({ liked: lastAction==='like' ? 1 : 0, ts: Date.now() }).catch(()=>{});
+    }
+    cleanupRoom();
+    // small debounce
+    setTimeout(()=> joinQueueAndFind(), 400);
+  }
+
+  function cleanupRoom(){
+    // remove match pointer
+    db.ref('matches/' + uid).remove().catch(()=>{});
+    // remove listeners
+    if (roomId){
+      db.ref(`rooms/${roomId}/callerCandidates`).off();
+      db.ref(`rooms/${roomId}/calleeCandidates`).off();
+      db.ref(`rooms/${roomId}/answer`).off();
+      db.ref(`rooms/${roomId}/offer`).off();
+    }
+    if (pc){
+      try{ pc.getSenders().forEach(s=> s.track && s.track.stop()); }catch(e){}
+      try{ pc.close(); }catch(e){}
+      pc = null;
+    }
+    reel.innerHTML = '';
+    roomId=null; role=null; pairedWith=null; lastAction=null;
+    setStatus('Searching...');
+  }
+
+  /************ Likes / Dislikes / Report ************/
+  likeCounter.addEventListener('click', async ()=>{
+    lastAction='like'; currentLikes++; likeCounter.innerText = `❤ ${currentLikes}`;
+    const cardLike = document.getElementById('cardLike'); if (cardLike) cardLike.innerText = `❤ ${currentLikes}`;
+    if (roomId) await db.ref(`feedback/${roomId}/${uid}`).set({ liked:1, ts:Date.now()}).catch(()=>{});
   });
 
-  // listen for callee ICE candidates
-  db.ref(`rooms/${rid}/calleeCandidates`).on('child_added', async snap => {
-    const c = snap.val();
-    if (c) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(e=>console.warn(e));
-  });
-}
-
-/* Join as callee */
-async function joinRoomAsCallee(rid, offerObj){
-  pc = createPeerConnection();
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
-  const offerDesc = new RTCSessionDescription(offerObj);
-  await pc.setRemoteDescription(offerDesc);
-
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-
-  const roomRef = db.ref('rooms/' + rid);
-  await roomRef.update({ answer: answer.toJSON(), answeredBy: uid });
-
-  // listen for caller ICE candidates
-  db.ref(`rooms/${rid}/callerCandidates`).on('child_added', async snap => {
-    const c = snap.val();
-    if (c) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(e=>console.warn(e));
+  micToggle.addEventListener('click', ()=>{
+    if (!localStream) return;
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (!audioTrack) return;
+    audioTrack.enabled = !audioTrack.enabled;
+    micToggle.innerText = audioTrack.enabled ? '🎙️' : '🔇';
   });
 
-  updateStatus('Connected');
-}
+  camToggle.addEventListener('click', ()=>{
+    if (!localStream) return;
+    const v = localStream.getVideoTracks()[0];
+    if (!v) return;
+    v.enabled = !v.enabled;
+    camToggle.innerText = v.enabled ? '📷' : '🚫';
+  });
 
-/* Render remote stream by creating/updating the top reel card */
-function renderRemoteStream(stream){
-  // clear existing single card
-  reel.innerHTML = '';
-  const card = document.createElement('div');
-  card.className = 'card';
-  const v = document.createElement('video');
-  v.className = 'remote';
-  v.autoplay = true;
-  v.playsInline = true;
-  v.srcObject = stream;
-  card.appendChild(v);
-
-  // small overlay for like count & name placeholder
-  const likeBox = document.createElement('div');
-  likeBox.style.position='absolute';
-  likeBox.style.left='18px';
-  likeBox.style.bottom='24px';
-  likeBox.style.color='white';
-  likeBox.style.fontWeight='700';
-  likeBox.style.textShadow='0 4px 12px rgba(0,0,0,0.6)';
-  likeBox.innerText = '❤ 0';
-  likeBox.id = 'curLikeBox';
-  card.appendChild(likeBox);
-
-  reel.appendChild(card);
-  // ensure scroll to top
-  card.scrollIntoView({behavior:'smooth'});
-}
-
-/* When user hits Next: cleanup and rejoin queue */
-async function nextStranger(){
-  updateStatus('Switching...');
-  // save like/dislike (optional): we can write under /feedback/{roomId}/{uid}
-  if (roomId){
-    await db.ref(`feedback/${roomId}/${uid}`).set({ liked: lastAction==='like' ? 1 : 0, ts: nowSec() }).catch(()=>{});
-  }
-  cleanupRoom();
-  // give short debounce to avoid rapid requeue
-  setTimeout(()=> joinQueueAndFind(), 400);
-}
-
-/* cleanup */
-function cleanupRoom(){
-  // remove match pointer
-  db.ref('matches/' + uid).remove().catch(()=>{});
-  // remove room listeners
-  if (roomId){
-    db.ref(`rooms/${roomId}/callerCandidates`).off();
-    db.ref(`rooms/${roomId}/calleeCandidates`).off();
-    db.ref(`rooms/${roomId}/answer`).off();
-    db.ref(`rooms/${roomId}/offer`).off();
-  }
-  // close pc
-  if (pc){
-    try{ pc.getSenders().forEach(s=>{ if (s.track) s.track.stop(); }); }catch(e){}
-    try{ pc.close(); }catch(e){}
-    pc = null;
-  }
-  // clear remote UI
-  reel.innerHTML = '';
-  roomId = null;
-  role = null;
-  updateStatus('Searching...');
-}
-
-/* likes/dislikes handling */
-let lastAction = null;
-likeBtn.addEventListener('click', async ()=>{
-  lastAction = 'like';
-  currentLikes++;
-  likeCountEl.textContent = `❤ ${currentLikes}`;
-  const curLikeBox = document.getElementById('curLikeBox');
-  if (curLikeBox) curLikeBox.innerText = `❤ ${currentLikes}`;
-  // optionally write instant feedback to DB
-  if (roomId) await db.ref(`feedback/${roomId}/${uid}`).set({ liked:1, ts:nowSec() }).catch(()=>{});
-});
-
-dislikeBtn.addEventListener('click', async ()=>{
-  lastAction = 'dislike';
-  // instant next on dislike
-  if (roomId) await db.ref(`feedback/${roomId}/${uid}`).set({ liked:0, ts:nowSec() }).catch(()=>{});
-  nextStranger();
-});
-
-/* Next button */
-nextBtn.addEventListener('click', nextStranger);
-
-/* add simple swipe-up detection for mobile (vertical) */
-let yStart=null;
-reel.addEventListener('touchstart', e=>{ yStart = e.touches[0].clientY; });
-reel.addEventListener('touchend', e=>{
-  if (yStart===null) return;
-  const yEnd = (e.changedTouches && e.changedTouches[0].clientY) || 0;
-  const delta = yStart - yEnd;
-  if (delta > 80) { // swipe up
+  reportBtn.addEventListener('click', async ()=>{
+    if (!roomId) return alert('No active match to report');
+    // increment report count simple
+    await db.ref(`reports/${roomId}`).transaction(curr => (curr||0)+1);
+    alert('Reported — thank you. We\'ll review this user.');
     nextStranger();
-  } else if (delta < -120) { // swipe down (optional: previous - not implemented)
-    // nothing
-  }
-  yStart = null;
-});
+  });
 
-/* safety: cleanup when page unload */
-window.addEventListener('beforeunload', async ()=> {
-  try{ db.ref('queue/' + uid).remove(); db.ref('matches/' + uid).remove(); }catch(e){}
-});
+  /************ UI events ************/
+  nextBtn.addEventListener('click', nextStranger);
 
-/* UI setup and small helpers */
-function setupUI(){
-  updateStatus('Ready');
-}
+  /* swipe to next detection */
+  let yStart=null;
+  reel.addEventListener('touchstart', e=>{ yStart = e.touches[0].clientY; });
+  reel.addEventListener('touchend', e=>{
+    if (yStart===null) return;
+    const yEnd = (e.changedTouches && e.changedTouches[0].clientY) || 0;
+    const delta = yStart - yEnd;
+    if (delta > 80) nextStranger();
+    yStart = null;
+  });
 
-/* ===============
-   Notes: This is a lightweight, client-only matchmaking + WebRTC signalling approach.
-   It will work as a zero-cost prototype. For higher reliability & scale:
-   - Move matchmaking to a small server to avoid race conditions and cheating
-   - Provision your own TURN (coturn) or LiveKit to handle heavy TURN traffic
-   - Add authentication and moderation tools (block/report)
-   =============== */
+  /* ensure cleanup on unload */
+  window.addEventListener('beforeunload', ()=> {
+    try{ db.ref('queue/' + uid).remove(); db.ref('matches/' + uid).remove(); }catch(e){}
+  });
+
+  function setupUI(){ setStatus('Ready'); }
 
   </script>
 </body>
